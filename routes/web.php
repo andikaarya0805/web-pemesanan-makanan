@@ -16,20 +16,41 @@ use Illuminate\Support\Facades\DB;
 
 // Improved Migration & Seeding for Vercel (Split to prevent timeouts)
 Route::group(['prefix' => 'v-db'], function () {
-    // 1. Check Status & Diagnostic
+    // 1. Check Status & Diagnostic (Enhanced with Raw PDO Test)
     Route::get('/status', function () {
         $dbConfig = config('database.connections.pgsql');
-        echo "<h1>NutriBox Migration Diagnostic</h1>";
-        echo "<strong>Active Host:</strong> " . ($dbConfig['host'] ?? 'not set') . "<br>";
-        echo "<strong>Active User:</strong> " . ($dbConfig['username'] ?? 'not set') . "<br>";
+        $host = $dbConfig['host'] ?? 'not set';
+        $user = $dbConfig['username'] ?? 'not set';
+        $pass = $dbConfig['password'] ?? 'not set';
+        $database = $dbConfig['database'] ?? 'not set';
+        $port = $dbConfig['port'] ?? 'not set';
+
+        echo "<h1>NutriBox Migration Diagnostic (Raw PDO)</h1>";
+        echo "<strong>Active Host:</strong> $host<br>";
+        echo "<strong>Active User:</strong> $user<br>";
+        echo "<strong>Active Database:</strong> $database<br>";
+        echo "<strong>Active Port:</strong> $port<br>";
+        echo "<strong>Password Mask:</strong> " . substr($pass, 0, 3) . "..." . substr($pass, -3) . " (" . strlen($pass) . " chars)<br>";
         echo "<strong>URL Config:</strong> " . (empty($dbConfig['url']) ? 'NULL (Forcing Individual Keys)' : 'SET') . "<br>";
         echo "<hr>";
         
+        // 1. Raw PDO Test (FAST)
+        try {
+            $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require";
+            $pdo = new \PDO($dsn, $user, $pass, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+            echo "<h2 style='color:green'>Raw PDO: OK!</h2>";
+        } catch (\Throwable $e) {
+            echo "<h2 style='color:red'>Raw PDO Error:</h2><pre>" . $e->getMessage() . "</pre>";
+        }
+
+        echo "<hr>";
+
+        // 2. Laravel Artisan Test (HEAVY)
         try {
             Artisan::call('migrate:status');
             return "<pre>" . Artisan::output() . "</pre>";
-        } catch (\Exception $e) {
-            return "<h1>Connection Check Failed</h1><pre>" . $e->getMessage() . "</pre>";
+        } catch (\Throwable $e) {
+            return "<h1>Laravel Artisan Error:</h1><pre>" . $e->getMessage() . "</pre>";
         }
     });
 
