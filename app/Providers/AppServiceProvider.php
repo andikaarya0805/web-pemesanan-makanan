@@ -46,23 +46,24 @@ class AppServiceProvider extends ServiceProvider
                 $pgUrl = 'postgres://' . substr($pgUrl, 13);
             }
 
-            // Parse URL manually to set discrete keys
-            $parts = parse_url($pgUrl);
-            if ($parts) {
-                Config::set('database.default', 'pgsql');
-                Config::set('database.connections.pgsql.host', $parts['host'] ?? null);
-                Config::set('database.connections.pgsql.port', $parts['port'] ?? 5432);
-                Config::set('database.connections.pgsql.database', ltrim($parts['path'] ?? '', '/'));
-                Config::set('database.connections.pgsql.username', $parts['user'] ?? null);
-                Config::set('database.connections.pgsql.password', isset($parts['pass']) ? urldecode($parts['pass']) : null);
+            // Aggressive Manual Parsing for Supabase Connection
+            $pgUrl = getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ($_SERVER['DATABASE_URL'] ?? null));
+            
+            if ($pgUrl) {
+                $components = parse_url($pgUrl);
                 
-                // Force schema and sslmode
-                Config::set('database.connections.pgsql.schema', 'public');
-                Config::set('database.connections.pgsql.search_path', 'public');
-                Config::set('database.connections.pgsql.sslmode', 'require');
-                
-                // CRITICAL: Set url to null to prevent Laravel from trying to re-parse it and causing TypeError
-                Config::set('database.connections.pgsql.url', null);
+                config([
+                    'database.default' => 'pgsql',
+                    'database.connections.pgsql.host' => $components['host'] ?? null,
+                    'database.connections.pgsql.port' => $components['port'] ?? 5432,
+                    'database.connections.pgsql.database' => ltrim($components['path'] ?? 'postgres', '/'),
+                    'database.connections.pgsql.username' => $components['user'] ?? null,
+                    'database.connections.pgsql.password' => isset($components['pass']) ? urldecode($components['pass']) : null,
+                    'database.connections.pgsql.url' => null, // CRITICAL: Force null to kill array_diff_key error
+                    'database.connections.pgsql.search_path' => 'public',
+                    'database.connections.pgsql.schema' => 'public',
+                    'database.connections.pgsql.sslmode' => 'prefer',
+                ]);
             }
         }
     }
