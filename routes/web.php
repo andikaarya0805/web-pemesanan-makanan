@@ -36,7 +36,8 @@ Route::group(['prefix' => 'v-db'], function () {
         
         // 1. Raw PDO Test (FAST)
         try {
-            $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require";
+            $endpoint = explode('.', $host)[0];
+            $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require;options='--endpoint=$endpoint'";
             $pdo = new \PDO($dsn, $user, $pass, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
             echo "<h2 style='color:green'>Raw PDO: OK!</h2>";
         } catch (\Throwable $e) {
