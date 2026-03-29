@@ -46,24 +46,28 @@ class AppServiceProvider extends ServiceProvider
                 $pgUrl = 'postgres://' . substr($pgUrl, 13);
             }
 
-            // Aggressive Manual Parsing for Supabase Connection
-            $pgUrl = getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ($_SERVER['DATABASE_URL'] ?? null));
+            // High-Compatibility Manual Parsing for Supabase Pooler
+            $targetUrl = getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ($_SERVER['DATABASE_URL'] ?? null));
             
-            if ($pgUrl) {
-                $components = parse_url($pgUrl);
+            if ($targetUrl) {
+                // Remove trailing slash to prevent empty database name
+                $targetUrl = rtrim($targetUrl, '/');
+                $components = parse_url($targetUrl);
                 
-                config([
-                    'database.default' => 'pgsql',
-                    'database.connections.pgsql.host' => $components['host'] ?? null,
-                    'database.connections.pgsql.port' => $components['port'] ?? 5432,
-                    'database.connections.pgsql.database' => ltrim($components['path'] ?? 'postgres', '/'),
-                    'database.connections.pgsql.username' => $components['user'] ?? null,
-                    'database.connections.pgsql.password' => isset($components['pass']) ? urldecode($components['pass']) : null,
-                    'database.connections.pgsql.url' => null, // CRITICAL: Force null to kill array_diff_key error
-                    'database.connections.pgsql.search_path' => 'public',
-                    'database.connections.pgsql.schema' => 'public',
-                    'database.connections.pgsql.sslmode' => 'prefer',
-                ]);
+                if (isset($components['host'])) {
+                    config([
+                        'database.default' => 'pgsql',
+                        'database.connections.pgsql.host' => $components['host'],
+                        'database.connections.pgsql.port' => $components['port'] ?? 5432,
+                        'database.connections.pgsql.database' => ltrim($components['path'] ?? 'postgres', '/'),
+                        'database.connections.pgsql.username' => isset($components['user']) ? urldecode($components['user']) : null,
+                        'database.connections.pgsql.password' => isset($components['pass']) ? urldecode($components['pass']) : null,
+                        'database.connections.pgsql.url' => null, // CRITICAL: Stop Laravel internal re-parsing
+                        'database.connections.pgsql.schema' => 'public',
+                        'database.connections.pgsql.search_path' => 'public',
+                        'database.connections.pgsql.sslmode' => 'prefer',
+                    ]);
+                }
             }
         }
     }
