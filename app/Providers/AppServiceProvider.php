@@ -25,26 +25,38 @@ class AppServiceProvider extends ServiceProvider
             $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
 
             if ($pgUrl) {
-                // Force sslmode=require & Neon SNI option
-                $host = parse_url($pgUrl, PHP_URL_HOST);
+                // Neon Authentication Pattern: Prefix username with endpoint ID (endpoint$user)
+                // This avoids SNI issues and the 'options' TypeError in Laravel/Connector.php
+                $urlParts = parse_url($pgUrl);
+                $host = $urlParts['host'] ?? '';
+                $user = $urlParts['user'] ?? '';
                 
                 if (str_contains($host, 'neon.tech')) {
                     $endpoint = explode('.', $host)[0];
-                    if (!str_contains($pgUrl, 'options=endpoint')) {
-                        $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'options=endpoint%3D' . $endpoint;
+                    if (!str_contains($user, '$')) {
+                        $newUser = $endpoint . '$' . $user;
+                        $pgUrl = str_replace($user . ':', $newUser . ':', $pgUrl);
                     }
                 }
 
+                // Force sslmode=require
                 if (!str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
                 }
                 
                 $config['database.connections.pgsql.url'] = $pgUrl;
             } elseif (env('POSTGRES_HOST')) {
-                // ... individual vars mode (Neon SNI logic)
-                $config['database.connections.pgsql.host'] = env('POSTGRES_HOST');
+                // ... individual vars mode (Neon Pattern)
+                $host = env('POSTGRES_HOST');
+                $user = env('POSTGRES_USER');
+                if (str_contains($host, 'neon.tech') && !str_contains($user, '$')) {
+                    $endpoint = explode('.', $host)[0];
+                    $user = $endpoint . '$' . $user;
+                }
+                
+                $config['database.connections.pgsql.host'] = $host;
                 $config['database.connections.pgsql.database'] = env('POSTGRES_DATABASE', 'verceldb');
-                $config['database.connections.pgsql.username'] = env('POSTGRES_USER');
+                $config['database.connections.pgsql.username'] = $user;
                 $config['database.connections.pgsql.password'] = env('POSTGRES_PASSWORD');
                 $config['database.connections.pgsql.sslmode'] = 'require';
             }
