@@ -37,6 +37,7 @@ try {
         $tmpDir . '/framework/sessions',
         $tmpDir . '/framework/testing',
         $tmpDir . '/framework/views',
+        $tmpDir . '/bootstrap/cache',
         $tmpDir . '/logs',
     ];
 
@@ -46,7 +47,14 @@ try {
         }
     }
 
-    // Force environment for serverless
+    // Force environment variables for writable cache paths (Laravel 11-13)
+    putenv('APP_SERVICES_CACHE=' . $tmpDir . '/bootstrap/cache/services.php');
+    putenv('APP_PACKAGES_CACHE=' . $tmpDir . '/bootstrap/cache/packages.php');
+    putenv('APP_CONFIG_CACHE=' . $tmpDir . '/bootstrap/cache/config.php');
+    putenv('APP_ROUTES_CACHE=' . $tmpDir . '/bootstrap/cache/routes.php');
+    putenv('APP_EVENTS_CACHE=' . $tmpDir . '/bootstrap/cache/events.php');
+    
+    // Legacy / general overrides
     putenv('VIEW_COMPILED_PATH=' . $tmpDir . '/framework/views');
     putenv('SESSION_DRIVER=cookie'); 
     putenv('LOG_CHANNEL=stderr');
@@ -56,14 +64,22 @@ try {
     // Load Autoloader
     require __DIR__ . '/../vendor/autoload.php';
 
-    // Boot Application Manually
+    // Boot Application
     $app = require_once __DIR__ . '/../bootstrap/app.php';
     
-    // Attempt to resolve the app to ensure core services are registered
-    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    // Explicitly set storage path to /tmp
+    $app->useStoragePath($tmpDir);
+
+    // Now handle the request using the standard Kernel flow for stability
+    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
     
-    // Now handle the request
-    $app->handleRequest(Illuminate\Http\Request::capture());
+    $response = $kernel->handle(
+        $request = Illuminate\Http\Request::capture()
+    );
+    
+    $response->send();
+    
+    $kernel->terminate($request, $response);
 
 } catch (\Throwable $e) {
     // This will be caught by the global handler above if it rethrows,

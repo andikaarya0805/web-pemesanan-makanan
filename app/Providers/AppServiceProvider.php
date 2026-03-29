@@ -12,18 +12,17 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Fix for Vercel persistence & Database
-        if (env('VERCEL_URL')) {
+        if (env('VERCEL_URL') || env('APP_ENV') === 'production') {
             $config = [
-                'view.compiled' => '/tmp/storage/framework/views',
+                'view.compiled' => '/tmp/framework/views',
                 'session.driver' => 'cookie',
                 'cache.default' => 'array',
+                'database.default' => 'pgsql',
             ];
 
             // Auto-configure Vercel Postgres if available
             if ($pgUrl = env('POSTGRES_URL')) {
-                $config['database.default'] = 'pgsql';
-                
-                // Ensure sslmode=require if not specifically disabled
+                // Ensure sslmode=require for Vercel Postgres
                 if (!str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
                 }
