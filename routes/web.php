@@ -11,6 +11,28 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\SubscriptionController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+
+// Temporary Migration & Seeding Route for Vercel
+Route::get('/v-migrate', function () {
+    // Show errors for debugging
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    
+    try {
+        // Run migrations
+        Artisan::call('migrate', ['--force' => true]);
+        $output = Artisan::output();
+        
+        // Run seeders (for Users, Plans, and Menu)
+        Artisan::call('db:seed', ['--force' => true]);
+        $output .= "\n" . Artisan::output();
+        
+        return "Success:\n" . nl2br($output);
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});
 
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
