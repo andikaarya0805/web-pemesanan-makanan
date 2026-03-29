@@ -17,52 +17,72 @@ use Illuminate\Support\Facades\DB;
 // Improved Migration & Seeding for Vercel (Split to prevent timeouts)
 Route::group(['prefix' => 'v-db'], function () {
     Route::get('/status', function () {
-        $dbConfig = config('database.connections.pgsql');
-        $activeHost = $dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set');
-        
-        echo "<h1>NutriBox Migration Status (Supabase)</h1>";
-        echo "<strong>Active Host:</strong> $activeHost<br>";
-        
-        // Debug Env Keys (Sensitive values masked)
-        echo "<h3>Environment Keys Detected:</h3><ul>";
-        $allEnv = array_unique(array_merge(array_keys($_ENV), array_keys($_SERVER)));
-        foreach ($allEnv as $key) {
-            if (str_contains($key, 'POSTGRES') || str_contains($key, 'DATABASE')) {
-                echo "<li>✅ $key</li>";
-            }
-        }
-        echo "</ul><hr>";
-        
         try {
-            // Get detailed Connection Info
-            $dbName = DB::selectOne("SELECT current_database() as db")->db;
-            $searchPath = DB::selectOne("SHOW search_path")->search_path;
-            $configUrl = config('database.connections.pgsql.url', 'not using url');
-            $maskedUrl = preg_replace('/:[^@\/]+@/', ':****@', $configUrl);
-
-            echo "<h3>Connection Details:</h3><ul>";
-            echo "<li><strong>Database:</strong> $dbName</li>";
-            echo "<li><strong>Schema (search_path):</strong> $searchPath</li>";
-            echo "<li><strong>URL (masked):</strong> <code>$maskedUrl</code></li>";
-            echo "</ul><hr>";
-
-            Artisan::call('migrate:status');
-            $output = "<h3>Migration Status:</h3><pre>" . Artisan::output() . "</pre>";
+            $dbConfig = config('database.connections.pgsql');
+            $activeHost = $dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set');
             
-            // List Tables in Public Schema
-            $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name");
-            $output .= "<h3>Tables in 'public' schema (" . count($tables) . "):</h3><ul>";
-            foreach ($tables as $table) {
-                $count = DB::table($table->table_name)->count();
-                $output .= "<li><strong>{$table->table_name}</strong>: $count rows</li>";
-            }
-            $output .= "</ul>";
+            // Raw PDO check
+            $pdo = DB::connection('pgsql')->getPdo();
+        
+        // 1. Current Context
+        $currentSchema = DB::selectOne('SELECT current_schema() as schema')->schema;
+        $searchPath = DB::selectOne('SHOW search_path')->{"search_path"};
+        $currentUser = DB::selectOne('SELECT current_user as user')->user;
+        $dbName = DB::selectOne('SELECT current_database() as db')->db;
 
-            return $output;
-        } catch (\Throwable $e) {
-            return "<h1>Status Check Error:</h1><pre>" . $e->getMessage() . "</pre>";
+        // 2. All Schemas
+        $schemas = DB::select("SELECT schema_name FROM information_schema.schemata");
+        
+        // 3. All Tables in Public
+        $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+        
+        // 4. Check 'plans' table existence anywhere
+        $plansExistence = DB::select("SELECT table_schema, table_name FROM information_schema.tables WHERE table_name = 'plans'");
+
+        $html = "<h1>NutriBox Supabase Deep Probe</h1>";
+        $html .= "<h3>1. Connection Health: <span style='color:green'>SUCCESS (Connected!)</span></h3>";
+        $html .= "<ul>";
+        $html .= "<li><strong>Current Host:</strong> " . ($dbConfig['host'] ?? 'N/A') . "</li>";
+        $html .= "<li><strong>Port:</strong> " . ($dbConfig['port'] ?? 'N/A') . "</li>";
+        $html .= "<li><strong>Database:</strong> $dbName</li>";
+        $html .= "<li><strong>Current User:</strong> $currentUser</li>";
+        $html .= "<li><strong>Current Schema:</strong> $currentSchema</li>";
+        $html .= "<li><strong>Search Path:</strong> $searchPath</li>";
+        $html .= "</ul>";
+
+        $html .= "<h3>2. Database Topology:</h3>";
+        $html .= "<ul>";
+        foreach ($schemas as $s) {
+            $html .= "<li>Schema: <strong>" . $s->schema_name . "</strong></li>";
         }
-    });
+        $html .= "</ul>";
+
+        $html .= "<h3>3. Tables in 'public' Schema:</h3>";
+        if (empty($tables)) {
+            $html .= "<p style='color:red'><strong>CRITICAL: No tables found in 'public' schema!</strong></p>";
+        } else {
+            $html .= "<ul>";
+            foreach ($tables as $t) {
+                $count = DB::table($t->table_name)->count();
+                $html .= "<li>Table: <code>" . $t->table_name . "</code> ($count rows)</li>";
+            }
+            $html .= "</ul>";
+        }
+
+        $html .= "<h3>4. Plans Table Location Search:</h3>";
+        if (empty($plansExistence)) {
+            $html .= "<p style='color:red'><strong>ERROR: Table 'plans' does not exist in ANY schema!</strong></p>";
+        } else {
+            foreach ($plansExistence as $p) {
+                $html .= "<li>Found at: <code>" . $p->table_schema . "." . $p->table_name . "</code></li>";
+            }
+        }
+
+        return $html;
+    } catch (\Exception $e) {
+        return "<h1>Database Error</h1><p style='color:red'>" . $e->getMessage() . "</p>";
+    }
+});
 
     // 2. Run Migrations Only
     Route::get('/migrate', function () {
