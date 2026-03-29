@@ -19,8 +19,10 @@ Route::group(['prefix' => 'v-db'], function () {
     // 1. Check Status & Diagnostic
     Route::get('/status', function () {
         $dbConfig = config('database.connections.pgsql');
-        echo "<h1>NutriBox Migration Diagnostic (Supabase)</h1>";
-        echo "<strong>Active Host:</strong> " . ($dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set')) . "<br>";
+        $activeHost = $dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set');
+        
+        echo "<h1>NutriBox Migration Status (Supabase)</h1>";
+        echo "<strong>Active Host:</strong> $activeHost<br>";
         echo "<hr>";
         
         try {

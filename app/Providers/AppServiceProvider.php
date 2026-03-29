@@ -21,12 +21,15 @@ class AppServiceProvider extends ServiceProvider
                 'database.connections.pgsql.port' => 5432,
             ];
 
-            // Priority: Non-pooling URL (Migration safe) > Standard URL > Individual vars
-            $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
-
-            $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
+            // Priority: Manual DATABASE_URL > Vercel Linked Storage vars
+            $pgUrl = env('DATABASE_URL') ?: env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL');
 
             if ($pgUrl) {
+                // Normalize 'postgresql://' to 'postgres://' if needed (some drivers prefer it)
+                if (str_starts_with($pgUrl, 'postgresql://')) {
+                    $pgUrl = 'postgres://' . substr($pgUrl, 13);
+                }
+
                 // Ensure sslmode=require for Supabase
                 if (!str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
