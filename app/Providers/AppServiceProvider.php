@@ -25,28 +25,31 @@ class AppServiceProvider extends ServiceProvider
             $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
 
             if ($pgUrl) {
-                // Neon Authentication Pattern: Prefix username with endpoint ID (endpoint$user)
-                // This avoids SNI issues and the 'options' TypeError in Laravel/Connector.php
+                // The 'Bulletproof' Neon Pattern: Break URL into individual parts
+                // and inject endpoint into username to bypass SNI issues.
                 $urlParts = parse_url($pgUrl);
                 $host = $urlParts['host'] ?? '';
                 $user = $urlParts['user'] ?? '';
-                
-                if (str_contains($host, 'neon.tech')) {
+                $pass = $urlParts['pass'] ?? '';
+                $database = ltrim($urlParts['path'] ?? '', '/');
+                $port = $urlParts['port'] ?? 5432;
+
+                if (str_contains($host, 'neon.tech') && !str_contains($user, '$')) {
                     $endpoint = explode('.', $host)[0];
-                    if (!str_contains($user, '$')) {
-                        $newUser = $endpoint . '$' . $user;
-                        $pgUrl = str_replace($user . ':', $newUser . ':', $pgUrl);
-                    }
+                    $user = $endpoint . '$' . $user;
                 }
 
-                // Force sslmode=require
-                if (!str_contains($pgUrl, 'sslmode=')) {
-                    $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
-                }
+                $config['database.connections.pgsql.host'] = $host;
+                $config['database.connections.pgsql.port'] = $port;
+                $config['database.connections.pgsql.database'] = $database;
+                $config['database.connections.pgsql.username'] = $user;
+                $config['database.connections.pgsql.password'] = $pass;
+                $config['database.connections.pgsql.sslmode'] = 'require';
                 
-                $config['database.connections.pgsql.url'] = $pgUrl;
+                // CRITICAL: Unset 'url' to force Laravel to use individual keys above
+                $config['database.connections.pgsql.url'] = null; 
             } elseif (env('POSTGRES_HOST')) {
-                // ... individual vars mode (Neon Pattern)
+                // Individual vars mode fallback
                 $host = env('POSTGRES_HOST');
                 $user = env('POSTGRES_USER');
                 if (str_contains($host, 'neon.tech') && !str_contains($user, '$')) {
@@ -58,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
                 $config['database.connections.pgsql.database'] = env('POSTGRES_DATABASE', 'verceldb');
                 $config['database.connections.pgsql.username'] = $user;
                 $config['database.connections.pgsql.password'] = env('POSTGRES_PASSWORD');
+                $config['database.connections.pgsql.port'] = env('POSTGRES_PORT', 5432);
                 $config['database.connections.pgsql.sslmode'] = 'require';
             }
 
