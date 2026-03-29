@@ -11,7 +11,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Fix for Vercel persistence
+        if (env('VERCEL_URL')) {
+            config([
+                'view.compiled' => '/tmp/storage/framework/views',
+                'session.driver' => 'cookie',
+                'cache.default' => 'array',
+            ]);
+        }
     }
 
     /**

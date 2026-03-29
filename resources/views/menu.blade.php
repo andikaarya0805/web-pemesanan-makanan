@@ -51,13 +51,7 @@
                 @foreach ($menuItems as $index => $item)
                     <div class="menu-card animate-on-scroll" style="background: white; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); transition: var(--transition);">
                         <div class="menu-img-wrapper" style="height: 250px; overflow: hidden; position: relative;">
-                            @if($index == 0)
-                                <img src="{{ asset('images/hero.png') }}" alt="{{ $item->name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            @elseif($index == 1)
-                                <img src="{{ asset('images/menu1.png') }}" alt="{{ $item->name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            @else
-                                <img src="{{ asset('images/menu2.png') }}" alt="{{ $item->name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            @endif
+                            <img src="{{ $item->image_url ? asset($item->image_url) : asset('images/menu-placeholder.png') }}" alt="{{ $item->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             <div style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; backdrop-filter: blur(4px);">{{ $item->calories }} kkal</div>
                             <div style="position: absolute; bottom: 15px; left: 15px; background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">{{ $item->category }}</div>
                         </div>

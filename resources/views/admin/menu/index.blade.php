@@ -35,7 +35,7 @@
                             @foreach($menuItems as $item)
                                 <tr style="border-top: 1px solid var(--border);">
                                     <td style="padding: 1rem 1.5rem;">
-                                        <img src="{{ $item->image_url ?? asset('images/menu-placeholder.png') }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                        <img src="{{ $item->image_url ? asset($item->image_url) : asset('images/menu-placeholder.png') }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
                                     </td>
                                     <td style="padding: 1rem 1.5rem;">
                                         <div style="font-weight: 600;">{{ $item->name }}</div>
