@@ -13,11 +13,13 @@ try {
     // Setup temporary storage for Vercel read-only filesystem
     $tmpDir = '/tmp';
     
-    // Subdirectories required for Laravel
+    // Subdirectories required for Laravel storage
     $folders = [
-        $tmpDir . '/views',
+        $tmpDir . '/app/public',
+        $tmpDir . '/framework/cache/data',
         $tmpDir . '/framework/sessions',
-        $tmpDir . '/framework/cache',
+        $tmpDir . '/framework/testing',
+        $tmpDir . '/framework/views',
         $tmpDir . '/logs',
     ];
 
@@ -28,13 +30,13 @@ try {
     }
 
     // Force environment variables for serverless compatibility
-    putenv('VIEW_COMPILED_PATH=' . $tmpDir . '/views');
-    putenv('SESSION_DRIVER=cookie'); // Simpler for Vercel unless DB is needed
+    putenv('VIEW_COMPILED_PATH=' . $tmpDir . '/framework/views');
+    putenv('SESSION_DRIVER=cookie'); 
     putenv('LOG_CHANNEL=stderr');
+    putenv('CACHE_STORE=array'); // Simplest for serverless if not using shared cache
     
-    // Tell Laravel to use /tmp for framework storage
-    // Carbon/Blade/etc. might use this
-    putenv('APP_STORAGE=' . $tmpDir);
+    // Ensure we tell Laravel about our environment
+    putenv('APP_ENV=production');
 
     // Proceed with Laravel bootstrap
     require __DIR__ . '/../public/index.php';
