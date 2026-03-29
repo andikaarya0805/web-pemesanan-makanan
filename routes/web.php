@@ -14,34 +14,38 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
-// Temporary Migration & Seeding Route for Vercel
-Route::get('/v-migrate', function () {
-    // Diagnostic info
-    $dbConfig = config('database.connections.pgsql');
-    $host = $dbConfig['host'] ?? 'not set';
-    $database = $dbConfig['database'] ?? 'not set';
-    $urlHost = isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set';
-    
-    echo "<h1>NutriBox Migration Diagnostic</h1>";
-    echo "<strong>Connection:</strong> pgsql<br>";
-    echo "<strong>Configured Host:</strong> $host<br>";
-    echo "<strong>Configured Database:</strong> $database<br>";
-    echo "<strong>URL Resolve Host:</strong> $urlHost<br>";
-    echo "<hr>";
+// Improved Migration & Seeding for Vercel (Split to prevent timeouts)
+Route::group(['prefix' => 'v-db'], function () {
+    // 1. Check Status
+    Route::get('/status', function () {
+        Artisan::call('migrate:status');
+        return "<pre>" . Artisan::output() . "</pre>";
+    });
 
-    try {
-        // Run migrations
-        Artisan::call('migrate', ['--force' => true]);
-        $output = Artisan::output();
-        
-        // Run seeders (for Users, Plans, and Menu)
-        Artisan::call('db:seed', ['--force' => true]);
-        $output .= "\n" . Artisan::output();
-        
-        return "Success:\n" . nl2br($output);
-    } catch (\Exception $e) {
-        return "Error: " . $e->getMessage();
-    }
+    // 2. Run Migrations Only
+    Route::get('/migrate', function () {
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            return "<h1>Migrations Success</h1><pre>" . Artisan::output() . "</pre>";
+        } catch (\Exception $e) {
+            return "<h1>Migrations Failed</h1><pre>" . $e->getMessage() . "</pre>";
+        }
+    });
+
+    // 3. Run Seeders Only
+    Route::get('/seed', function () {
+        try {
+            Artisan::call('db:seed', ['--force' => true]);
+            return "<h1>Seeding Success</h1><pre>" . Artisan::output() . "</pre>";
+        } catch (\Exception $e) {
+            return "<h1>Seeding Failed</h1><pre>" . $e->getMessage() . "</pre>";
+        }
+    });
+});
+
+// Legacy redirect for convenience
+Route::get('/v-migrate', function () {
+    return redirect('/v-db/migrate');
 });
 
 // Public Routes
