@@ -16,42 +16,18 @@ use Illuminate\Support\Facades\DB;
 
 // Improved Migration & Seeding for Vercel (Split to prevent timeouts)
 Route::group(['prefix' => 'v-db'], function () {
-    // 1. Check Status & Diagnostic (Enhanced with Raw PDO Test)
+    // 1. Check Status & Diagnostic
     Route::get('/status', function () {
         $dbConfig = config('database.connections.pgsql');
-        $host = $dbConfig['host'] ?? 'not set';
-        $user = $dbConfig['username'] ?? 'not set';
-        $pass = $dbConfig['password'] ?? 'not set';
-        $database = $dbConfig['database'] ?? 'not set';
-        $port = $dbConfig['port'] ?? 'not set';
-
-        echo "<h1>NutriBox Migration Diagnostic (Raw PDO)</h1>";
-        echo "<strong>Active Host:</strong> $host<br>";
-        echo "<strong>Active User:</strong> $user<br>";
-        echo "<strong>Active Database:</strong> $database<br>";
-        echo "<strong>Active Port:</strong> $port<br>";
-        echo "<strong>Password Mask:</strong> " . substr($pass, 0, 3) . "..." . substr($pass, -3) . " (" . strlen($pass) . " chars)<br>";
-        echo "<strong>URL Config:</strong> " . (empty($dbConfig['url']) ? 'NULL (Forcing Individual Keys)' : 'SET') . "<br>";
+        echo "<h1>NutriBox Migration Diagnostic (Supabase)</h1>";
+        echo "<strong>Active Host:</strong> " . ($dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set')) . "<br>";
         echo "<hr>";
         
-        // 1. Raw PDO Test (FAST)
-        try {
-            $endpoint = explode('.', $host)[0];
-            $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require;options='--endpoint=$endpoint'";
-            $pdo = new \PDO($dsn, $user, $pass, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
-            echo "<h2 style='color:green'>Raw PDO: OK!</h2>";
-        } catch (\Throwable $e) {
-            echo "<h2 style='color:red'>Raw PDO Error:</h2><pre>" . $e->getMessage() . "</pre>";
-        }
-
-        echo "<hr>";
-
-        // 2. Laravel Artisan Test (HEAVY)
         try {
             Artisan::call('migrate:status');
             return "<pre>" . Artisan::output() . "</pre>";
         } catch (\Throwable $e) {
-            return "<h1>Laravel Artisan Error:</h1><pre>" . $e->getMessage() . "</pre>";
+            return "<h1>Connection Error:</h1><pre>" . $e->getMessage() . "</pre>";
         }
     });
 
