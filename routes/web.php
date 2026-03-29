@@ -16,14 +16,22 @@ use Illuminate\Support\Facades\DB;
 
 // Improved Migration & Seeding for Vercel (Split to prevent timeouts)
 Route::group(['prefix' => 'v-db'], function () {
-    // 1. Check Status & Diagnostic
     Route::get('/status', function () {
         $dbConfig = config('database.connections.pgsql');
         $activeHost = $dbConfig['host'] ?? (isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set');
         
         echo "<h1>NutriBox Migration Status (Supabase)</h1>";
         echo "<strong>Active Host:</strong> $activeHost<br>";
-        echo "<hr>";
+        
+        // Debug Env Keys (Sensitive values masked)
+        echo "<h3>Environment Keys Detected:</h3><ul>";
+        $allEnv = array_unique(array_merge(array_keys($_ENV), array_keys($_SERVER)));
+        foreach ($allEnv as $key) {
+            if (str_contains($key, 'POSTGRES') || str_contains($key, 'DATABASE')) {
+                echo "<li>✅ $key</li>";
+            }
+        }
+        echo "</ul><hr>";
         
         try {
             Artisan::call('migrate:status');
