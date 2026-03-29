@@ -38,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
                     $pgUrl = 'postgres://' . substr($pgUrl, 13);
                 }
 
+                // Force search_path=public in the URL for Pooler compatibility
+                if (!str_contains($pgUrl, 'search_path=')) {
+                    $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'options=-csearch_path%3Dpublic';
+                }
+
                 // Ensure sslmode=require
                 if (!str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';

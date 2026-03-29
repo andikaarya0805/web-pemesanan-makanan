@@ -34,6 +34,18 @@ Route::group(['prefix' => 'v-db'], function () {
         echo "</ul><hr>";
         
         try {
+            // Get detailed Connection Info
+            $dbName = DB::selectOne("SELECT current_database() as db")->db;
+            $searchPath = DB::selectOne("SHOW search_path")->search_path;
+            $configUrl = config('database.connections.pgsql.url', 'not using url');
+            $maskedUrl = preg_replace('/:[^@\/]+@/', ':****@', $configUrl);
+
+            echo "<h3>Connection Details:</h3><ul>";
+            echo "<li><strong>Database:</strong> $dbName</li>";
+            echo "<li><strong>Schema (search_path):</strong> $searchPath</li>";
+            echo "<li><strong>URL (masked):</strong> <code>$maskedUrl</code></li>";
+            echo "</ul><hr>";
+
             Artisan::call('migrate:status');
             $output = "<h3>Migration Status:</h3><pre>" . Artisan::output() . "</pre>";
             
