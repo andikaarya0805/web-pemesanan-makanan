@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
                 'cache.default' => 'array',
                 'database.default' => 'pgsql',
                 'database.connections.pgsql.port' => 5432,
+                'database.connections.pgsql.search_path' => 'public',
+                'database.connections.pgsql.schema' => 'public',
             ];
 
             // Priority: Explicit $_ENV/$_SERVER > Vercel Linked Storage vars > Laravel env()

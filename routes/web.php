@@ -35,9 +35,20 @@ Route::group(['prefix' => 'v-db'], function () {
         
         try {
             Artisan::call('migrate:status');
-            return "<pre>" . Artisan::output() . "</pre>";
+            $output = "<h3>Migration Status:</h3><pre>" . Artisan::output() . "</pre>";
+            
+            // List Tables in Public Schema
+            $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name");
+            $output .= "<h3>Tables in 'public' schema (" . count($tables) . "):</h3><ul>";
+            foreach ($tables as $table) {
+                $count = DB::table($table->table_name)->count();
+                $output .= "<li><strong>{$table->table_name}</strong>: $count rows</li>";
+            }
+            $output .= "</ul>";
+
+            return $output;
         } catch (\Throwable $e) {
-            return "<h1>Connection Error:</h1><pre>" . $e->getMessage() . "</pre>";
+            return "<h1>Status Check Error:</h1><pre>" . $e->getMessage() . "</pre>";
         }
     });
 
