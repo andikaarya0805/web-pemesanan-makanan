@@ -33,16 +33,26 @@ try {
     putenv('VIEW_COMPILED_PATH=' . $tmpDir . '/framework/views');
     putenv('SESSION_DRIVER=cookie'); 
     putenv('LOG_CHANNEL=stderr');
-    putenv('CACHE_STORE=array'); // Simplest for serverless if not using shared cache
-    
-    // Ensure we tell Laravel about our environment
+    putenv('CACHE_STORE=array'); 
     putenv('APP_ENV=production');
+
+    // Bypass Laravel's Exception Handler for rendering to see the ORIGINAL error
+    // We override the global error handler temporarily
+    set_exception_handler(function ($e) {
+        echo "<h1>RAW Emergency Debug - NutriBox</h1>";
+        echo "<p><strong>Message:</strong> " . $e->getMessage() . "</p>";
+        echo "<p><strong>Class:</strong> " . get_class($e) . "</p>";
+        echo "<p><strong>File:</strong> " . $e->getFile() . " on line " . $e->getLine() . "</p>";
+        echo "<h3>Stack Trace:</h3>";
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
+        exit;
+    });
 
     // Proceed with Laravel bootstrap
     require __DIR__ . '/../public/index.php';
 } catch (\Throwable $e) {
-    echo "<h1>NutriBox Emergency Debug</h1>";
+    echo "<h1>NutriBox Boot Failure</h1>";
     echo "<p><strong>Error:</strong> " . $e->getMessage() . "</p>";
-    echo "<p><strong>File:</strong> " . $e->getFile() . " on line " . $e->getLine() . "</p>";
+    echo "<p><strong>Class:</strong> " . get_class($e) . "</p>";
     echo "<pre>" . $e->getTraceAsString() . "</pre>";
 }
