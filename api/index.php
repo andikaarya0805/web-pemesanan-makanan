@@ -60,6 +60,7 @@ try {
     putenv('LOG_CHANNEL=stderr');
     putenv('CACHE_STORE=array'); 
     putenv('APP_ENV=production');
+    putenv('DB_CONNECTION=pgsql');
 
     // Load Autoloader
     require __DIR__ . '/../vendor/autoload.php';

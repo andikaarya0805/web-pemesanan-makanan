@@ -20,14 +20,22 @@ class AppServiceProvider extends ServiceProvider
                 'database.default' => 'pgsql',
             ];
 
-            // Auto-configure Vercel Postgres if available
-            if ($pgUrl = env('POSTGRES_URL')) {
-                // Ensure sslmode=require for Vercel Postgres
-                if (!str_contains($pgUrl, 'sslmode=')) {
+            // Priority: Non-pooling URL (Migration safe) > Standard URL > Individual vars
+            $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
+
+            if ($pgUrl) {
+                // Force sslmode=require if using URL
+                if (str_contains($pgUrl, 'postgres://') && !str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
                 }
-                
                 $config['database.connections.pgsql.url'] = $pgUrl;
+            } elseif (env('POSTGRES_HOST')) {
+                $config['database.connections.pgsql.host'] = env('POSTGRES_HOST');
+                $config['database.connections.pgsql.database'] = env('POSTGRES_DATABASE', 'verceldb');
+                $config['database.connections.pgsql.username'] = env('POSTGRES_USER');
+                $config['database.connections.pgsql.password'] = env('POSTGRES_PASSWORD');
+                $config['database.connections.pgsql.port'] = env('POSTGRES_PORT', 5432);
+                $config['database.connections.pgsql.sslmode'] = 'require';
             }
 
             config($config);

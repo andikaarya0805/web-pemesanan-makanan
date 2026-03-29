@@ -12,13 +12,23 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 // Temporary Migration & Seeding Route for Vercel
 Route::get('/v-migrate', function () {
-    // Show errors for debugging
-    ini_set('display_errors', 1);
-    error_reporting(E_ALL);
+    // Diagnostic info
+    $dbConfig = config('database.connections.pgsql');
+    $host = $dbConfig['host'] ?? 'not set';
+    $database = $dbConfig['database'] ?? 'not set';
+    $urlHost = isset($dbConfig['url']) ? parse_url($dbConfig['url'], PHP_URL_HOST) : 'not set';
     
+    echo "<h1>NutriBox Migration Diagnostic</h1>";
+    echo "<strong>Connection:</strong> pgsql<br>";
+    echo "<strong>Configured Host:</strong> $host<br>";
+    echo "<strong>Configured Database:</strong> $database<br>";
+    echo "<strong>URL Resolve Host:</strong> $urlHost<br>";
+    echo "<hr>";
+
     try {
         // Run migrations
         Artisan::call('migrate', ['--force' => true]);
