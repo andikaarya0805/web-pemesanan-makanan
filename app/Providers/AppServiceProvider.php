@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Set database configuration using URL only to avoid array configuration conflicts on Vercel.
+     * Set database configuration using discrete keys to avoid array_diff_key errors.
      */
     protected function applyDatabaseEnvironment(): void
     {
@@ -46,27 +46,24 @@ class AppServiceProvider extends ServiceProvider
                 $pgUrl = 'postgres://' . substr($pgUrl, 13);
             }
 
-            // Force search_path=public directly in the URL string
-            // This is the most reliable way for Supabase Transaction Poolers
-            if (!str_contains($pgUrl, 'search_path=')) {
-                $separator = str_contains($pgUrl, '?') ? '&' : '?';
-                $pgUrl .= $separator . 'options=-csearch_path%3Dpublic';
+            // Parse URL manually to set discrete keys
+            $parts = parse_url($pgUrl);
+            if ($parts) {
+                Config::set('database.default', 'pgsql');
+                Config::set('database.connections.pgsql.host', $parts['host'] ?? null);
+                Config::set('database.connections.pgsql.port', $parts['port'] ?? 5432);
+                Config::set('database.connections.pgsql.database', ltrim($parts['path'] ?? '', '/'));
+                Config::set('database.connections.pgsql.username', $parts['user'] ?? null);
+                Config::set('database.connections.pgsql.password', isset($parts['pass']) ? urldecode($parts['pass']) : null);
+                
+                // Force schema and sslmode
+                Config::set('database.connections.pgsql.schema', 'public');
+                Config::set('database.connections.pgsql.search_path', 'public');
+                Config::set('database.connections.pgsql.sslmode', 'require');
+                
+                // CRITICAL: Set url to null to prevent Laravel from trying to re-parse it and causing TypeError
+                Config::set('database.connections.pgsql.url', null);
             }
-
-            // Ensure SSL
-            if (!str_contains($pgUrl, 'sslmode=')) {
-                $pgUrl .= '&sslmode=require';
-            }
-
-            Config::set('database.default', 'pgsql');
-            Config::set('database.connections.pgsql.url', $pgUrl);
-            
-            // Clear all discrete keys to prevent any merging/conflict issues
-            Config::set('database.connections.pgsql.host', null);
-            Config::set('database.connections.pgsql.port', null);
-            Config::set('database.connections.pgsql.database', null);
-            Config::set('database.connections.pgsql.username', null);
-            Config::set('database.connections.pgsql.password', null);
         }
     }
 }
