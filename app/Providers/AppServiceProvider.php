@@ -18,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
                 'session.driver' => 'cookie',
                 'cache.default' => 'array',
                 'database.default' => 'pgsql',
+                'database.connections.pgsql.port' => 5432,
             ];
 
             // Priority: Non-pooling URL (Migration safe) > Standard URL > Individual vars

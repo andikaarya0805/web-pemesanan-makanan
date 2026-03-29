@@ -61,6 +61,7 @@ try {
     putenv('CACHE_STORE=array'); 
     putenv('APP_ENV=production');
     putenv('DB_CONNECTION=pgsql');
+    putenv('DB_PORT=5432');
 
     // Load Autoloader
     require __DIR__ . '/../vendor/autoload.php';
