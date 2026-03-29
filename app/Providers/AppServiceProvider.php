@@ -25,17 +25,33 @@ class AppServiceProvider extends ServiceProvider
             $pgUrl = env('POSTGRES_URL_NON_POOLING') ?: env('POSTGRES_URL') ?: env('DATABASE_URL');
 
             if ($pgUrl) {
-                // Force sslmode=require if using URL
-                if (str_contains($pgUrl, 'postgres://') && !str_contains($pgUrl, 'sslmode=')) {
+                // Force sslmode=require & Neon SNI option
+                $host = parse_url($pgUrl, PHP_URL_HOST);
+                
+                if (str_contains($host, 'neon.tech')) {
+                    $endpoint = explode('.', $host)[0];
+                    if (!str_contains($pgUrl, 'options=endpoint')) {
+                        $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'options=endpoint%3D' . $endpoint;
+                    }
+                }
+
+                if (!str_contains($pgUrl, 'sslmode=')) {
                     $pgUrl .= (str_contains($pgUrl, '?') ? '&' : '?') . 'sslmode=require';
                 }
+                
                 $config['database.connections.pgsql.url'] = $pgUrl;
             } elseif (env('POSTGRES_HOST')) {
-                $config['database.connections.pgsql.host'] = env('POSTGRES_HOST');
+                // ... individual vars mode (Neon SNI logic)
+                $host = env('POSTGRES_HOST');
+                if (str_contains($host, 'neon.tech')) {
+                    $endpoint = explode('.', $host)[0];
+                    $config['database.connections.pgsql.options'] = '--endpoint=' . $endpoint;
+                }
+                
+                $config['database.connections.pgsql.host'] = $host;
                 $config['database.connections.pgsql.database'] = env('POSTGRES_DATABASE', 'verceldb');
                 $config['database.connections.pgsql.username'] = env('POSTGRES_USER');
                 $config['database.connections.pgsql.password'] = env('POSTGRES_PASSWORD');
-                $config['database.connections.pgsql.port'] = env('POSTGRES_PORT', 5432);
                 $config['database.connections.pgsql.sslmode'] = 'require';
             }
 
