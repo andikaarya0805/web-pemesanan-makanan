@@ -23,6 +23,10 @@ set_exception_handler(function ($e) {
     echo "<li>PHP Version: " . PHP_VERSION . "</li>";
     echo "<li>APP_KEY Set: " . (getenv('APP_KEY') ? 'Yes' : 'No') . "</li>";
     echo "<li>DB_CONNECTION: " . getenv('DB_CONNECTION') . "</li>";
+    
+    $pgUrl = $_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? getenv('DATABASE_URL') ?? getenv('POSTGRES_URL');
+    $maskedUrl = preg_replace('/:[^@\/]+@/', ':****@', $pgUrl);
+    echo "<li>Detected PG URL: " . ($pgUrl ? "Yes (<code>$maskedUrl</code>)" : "None") . "</li>";
     echo "</ul>";
     echo "<h3>Stack Trace:</h3>";
     echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
