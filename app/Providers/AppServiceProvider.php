@@ -42,13 +42,7 @@ class AppServiceProvider extends ServiceProvider
                 $config['database.connections.pgsql.url'] = $pgUrl;
             } elseif (env('POSTGRES_HOST')) {
                 // ... individual vars mode (Neon SNI logic)
-                $host = env('POSTGRES_HOST');
-                if (str_contains($host, 'neon.tech')) {
-                    $endpoint = explode('.', $host)[0];
-                    $config['database.connections.pgsql.options'] = '--endpoint=' . $endpoint;
-                }
-                
-                $config['database.connections.pgsql.host'] = $host;
+                $config['database.connections.pgsql.host'] = env('POSTGRES_HOST');
                 $config['database.connections.pgsql.database'] = env('POSTGRES_DATABASE', 'verceldb');
                 $config['database.connections.pgsql.username'] = env('POSTGRES_USER');
                 $config['database.connections.pgsql.password'] = env('POSTGRES_PASSWORD');
