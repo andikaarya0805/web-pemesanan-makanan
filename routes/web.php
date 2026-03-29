@@ -16,10 +16,21 @@ use Illuminate\Support\Facades\DB;
 
 // Improved Migration & Seeding for Vercel (Split to prevent timeouts)
 Route::group(['prefix' => 'v-db'], function () {
-    // 1. Check Status
+    // 1. Check Status & Diagnostic
     Route::get('/status', function () {
-        Artisan::call('migrate:status');
-        return "<pre>" . Artisan::output() . "</pre>";
+        $dbConfig = config('database.connections.pgsql');
+        echo "<h1>NutriBox Migration Diagnostic</h1>";
+        echo "<strong>Active Host:</strong> " . ($dbConfig['host'] ?? 'not set') . "<br>";
+        echo "<strong>Active User:</strong> " . ($dbConfig['username'] ?? 'not set') . "<br>";
+        echo "<strong>URL Config:</strong> " . (empty($dbConfig['url']) ? 'NULL (Forcing Individual Keys)' : 'SET') . "<br>";
+        echo "<hr>";
+        
+        try {
+            Artisan::call('migrate:status');
+            return "<pre>" . Artisan::output() . "</pre>";
+        } catch (\Exception $e) {
+            return "<h1>Connection Check Failed</h1><pre>" . $e->getMessage() . "</pre>";
+        }
     });
 
     // 2. Run Migrations Only
