@@ -67,6 +67,14 @@ try {
     putenv('DB_CONNECTION=pgsql');
     putenv('DB_PORT=5432');
 
+    // EMERGENCY SUPABASE OVERRIDE
+    // This forces the app to use the correct Supabase Pooler (IPv4) Bypass Vercel Env Issues
+    $emergencyUrl = "postgresql://postgres.kqujatdfxlswyzjkshda:KyaaaMancung@db.kqujatdfxlswyzjkshda.supabase.co:6543/postgres?sslmode=require";
+    putenv("DATABASE_URL=$emergencyUrl");
+    putenv("DB_CONNECTION=pgsql");
+    $_ENV['DATABASE_URL'] = $emergencyUrl;
+    $_SERVER['DATABASE_URL'] = $emergencyUrl;
+
     // Load Autoloader
     require __DIR__ . '/../vendor/autoload.php';
 
